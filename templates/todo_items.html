@@ -1,0 +1,6 @@
+{% for todo_item in todo_items %}
+<div class="todo-list_item">
+  <p>{{ todo_item.item_description }}</p><p>{{todo_item.id}}</p>
+  <input type="checkbox" checked="{{ todo_item.is_complete }}" value="done" class="todo-list_item_done-button"> 
+</div>
+{% endfor %}

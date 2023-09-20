@@ -1,0 +1,18 @@
+body {
+  background-color: #0f1a20;
+}
+
+.todo-list_item {
+  width: 50%;
+  border: 2px #6e9bb1 solid;
+  border-radius: 8px;
+  background-color: #6e9bb1;
+  margin: auto;
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.todo-list_item_done-button {
+  
+}
