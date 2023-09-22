@@ -1,6 +1,19 @@
 {% for todo_item in todo_items %}
 <div class="todo-list_item">
-  <p>{{ todo_item.item_description }}</p><p>{{todo_item.id}}</p>
-  <input type="checkbox" checked="{{ todo_item.is_complete }}" value="done" class="todo-list_item_done-button"> 
+  <p>{{ todo_item.item_description }}</p>
+  <div>
+    <input
+      type="checkbox"
+      checked="{{ todo_item.is_complete }}"
+      value="done"
+      class="todo-list_item_done-button"
+    />
+    <img
+      src="/static/trash-can.png"
+      hx-delete="/todo?id={{ todo_item.id }}"
+      hx-target="closest .todo-list_item"
+      hx-swap="delete"
+    />
+  </div>
 </div>
 {% endfor %}

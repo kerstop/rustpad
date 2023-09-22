@@ -1,3 +1,4 @@
+mod authentication;
 mod templates;
 
 use core::panic;
@@ -11,6 +12,8 @@ use axum::{
 };
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::EnvFilter;
 
 static DB_CONN: OnceCell<sqlx::PgPool> = OnceCell::new();
 
@@ -32,18 +35,13 @@ struct TodoItem {
     is_complete: bool,
 }
 
-impl axum::response::IntoResponse for RustpadError {
-    fn into_response(self) -> axum::response::Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Something went wrong: {}", self.0),
-        )
-            .into_response()
-    }
-}
-
 #[tokio::main]
 async fn main() {
+    // tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
     let db_connection_string = std::env::var("DATABASE_URL")
         .expect("env variable `DATABASE_URL` should describe where the db is located");
 
@@ -54,10 +52,18 @@ async fn main() {
         })
         .unwrap();
 
+    let middleware = tower::ServiceBuilder::new().layer(TraceLayer::new_for_http());
+
     let app = Router::new()
         .route("/", get(index))
         .nest("/static", axum_static::static_router("static"))
-        .route("/todo", post(todo_post_handler).get(todo_get_handler));
+        .route(
+            "/todo",
+            post(todo_post_handler)
+                .get(todo_get_handler)
+                .delete(todo_delete_handler),
+        )
+        .layer(middleware);
 
     axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
         .serve(app.into_make_service())
@@ -75,15 +81,15 @@ struct CreateTodoRequest {
 }
 
 async fn todo_post_handler(form: Form<CreateTodoRequest>) -> Result<Html<String>, RustpadError> {
-
     let todo_item = sqlx::query_as!(
         TodoItem,
         "INSERT INTO todo_items (item_description) VALUES ($1) RETURNING *;",
         form.description
     )
-    .fetch_one(DB_CONN.get().unwrap()).await?;
+    .fetch_one(DB_CONN.get().unwrap())
+    .await?;
 
-    Ok(Html(templates::TodoItems(vec![todo_item]).to_string()))
+    Ok(Html(templates::TodoItems::new(vec![todo_item]).to_string()))
 }
 
 async fn todo_get_handler() -> Result<Html<String>, RustpadError> {
@@ -91,5 +97,30 @@ async fn todo_get_handler() -> Result<Html<String>, RustpadError> {
         .fetch_all(DB_CONN.get().unwrap())
         .await?;
 
-    Ok(Html(templates::TodoItems(todo_items).to_string()))
+    Ok(Html(templates::TodoItems::new(todo_items).to_string()))
+}
+
+#[derive(Deserialize)]
+struct TodoDeleteRequest {
+    pub id: i32,
+}
+
+async fn todo_delete_handler(request: axum::extract::Query<TodoDeleteRequest>) -> StatusCode {
+    match sqlx::query!("DELETE FROM todo_items WHERE id=$1", request.id)
+        .execute(DB_CONN.get().unwrap())
+        .await
+    {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+impl axum::response::IntoResponse for RustpadError {
+    fn into_response(self) -> axum::response::Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Something went wrong: {}", self.0),
+        )
+            .into_response()
+    }
 }

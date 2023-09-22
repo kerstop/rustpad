@@ -13,6 +13,16 @@ body {
   justify-content: space-between;
 }
 
+.todo-list_item div img {
+  height: 2em;
+  vertical-align: middle;
+}
+
+.todo-list_item div {
+  display: flex;
+  align-items: center;
+}
+
 .todo-list_item_done-button {
   
 }
