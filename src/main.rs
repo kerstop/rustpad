@@ -5,8 +5,10 @@ use core::panic;
 
 use anyhow::anyhow;
 use axum::{
+    http::header,
     http::StatusCode,
-    response::Html,
+    response,
+    response::{AppendHeaders, Html, IntoResponse},
     routing::{get, post},
     Form, Router,
 };
@@ -14,6 +16,7 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
+use scrypt::{Scrypt, password_hash::{PasswordHasher, SaltString, rand_core::OsRng}};
 
 static DB_CONN: OnceCell<sqlx::PgPool> = OnceCell::new();
 
@@ -42,6 +45,7 @@ async fn main() {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
+
     let db_connection_string = std::env::var("DATABASE_URL")
         .expect("env variable `DATABASE_URL` should describe where the db is located");
 
@@ -63,6 +67,7 @@ async fn main() {
                 .get(todo_get_handler)
                 .delete(todo_delete_handler),
         )
+        .route("/login", post(login_post_handler))
         .layer(middleware);
 
     axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
@@ -115,7 +120,26 @@ async fn todo_delete_handler(request: axum::extract::Query<TodoDeleteRequest>) -
     }
 }
 
-impl axum::response::IntoResponse for RustpadError {
+#[derive(Deserialize)]
+struct LoginRequest {
+    username: String,
+    password: String,
+}
+
+async fn login_post_handler(login_request: Form<LoginRequest>) -> impl IntoResponse {
+    let cookie = format!("login_token={}; Secure; HttpOnly", "not_set");
+
+    let salt = SaltString::generate(&mut OsRng);
+
+    let hash = Scrypt.hash_password(login_request.password.as_bytes(), &salt).expect("hash to work");
+    let length = hash.to_string().len();
+
+    println!("hash is {hash} with length {length}");
+
+    return AppendHeaders([(header::SET_COOKIE, cookie)]);
+}
+
+impl IntoResponse for RustpadError {
     fn into_response(self) -> axum::response::Response {
         (
             StatusCode::INTERNAL_SERVER_ERROR,

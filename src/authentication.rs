@@ -1,9 +1,13 @@
 use axum::{
-    extract::FromRequestParts,
+    extract::{FromRequestParts},
     http::{request::Parts, StatusCode},
     response::IntoResponse,
     RequestPartsExt,
 };
+
+use axum_extra::extract::CookieJar;
+
+use super::DB_CONN;
 
 struct User {}
 
@@ -26,6 +30,7 @@ impl<S> FromRequestParts<S> for User {
         Self: 'async_trait,
     {
         Box::pin(async {
+            let cookies = parts.extract::<CookieJar>().await.unwrap();
             return Ok(User {})
         })
     }

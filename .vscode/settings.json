@@ -1,5 +1,17 @@
 {
     "rust-analyzer.cargo.extraEnv": {
         "DATABASE_URL": "postgres:///rustpad"
-    }
+    },
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "askForPassword": true,
+            "driver": "PostgreSQL",
+            "name": "local",
+            "database": "rustpad",
+            "username": "kerstop"
+        }
+    ]
 }
