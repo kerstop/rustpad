@@ -1,15 +1,21 @@
 use axum::{
-    extract::{FromRequestParts},
+    extract::FromRequestParts,
     http::{request::Parts, StatusCode},
-    response::IntoResponse,
     RequestPartsExt,
 };
 
 use axum_extra::extract::CookieJar;
+use jsonwebtoken::{decode, Algorithm, Validation};
+use serde::Deserialize;
 
 use super::DB_CONN;
+use super::JWT_SECRET;
 
-struct User {}
+#[derive(Deserialize)]
+pub struct User {
+    pub id: i64,
+    pub username: String,
+}
 
 impl<S> FromRequestParts<S> for User {
     type Rejection = StatusCode;
@@ -31,7 +37,34 @@ impl<S> FromRequestParts<S> for User {
     {
         Box::pin(async {
             let cookies = parts.extract::<CookieJar>().await.unwrap();
-            return Ok(User {})
+
+            let token = match cookies.get("login_token") {
+                Some(t) => t,
+                None => return Err(StatusCode::UNAUTHORIZED),
+            };
+
+            let username = match decode::<super::JwtClaims>(
+                token.value(),
+                &JWT_SECRET.1,
+                &Validation::new(Algorithm::HS512),
+            ) {
+                Ok(data) => data.claims.username,
+                Err(e) => return Err(StatusCode::UNAUTHORIZED),
+            };
+
+            let user = match sqlx::query_as!(
+                User,
+                "SELECT id, username FROM users WHERE username = $1;",
+                username
+            )
+            .fetch_one(&*DB_CONN)
+            .await
+            {
+                Ok(u) => u,
+                Err(_) => return Err(StatusCode::UNAUTHORIZED),
+            };
+
+            return Ok(user);
         })
     }
 }

@@ -1,8 +1,5 @@
 use askama::Template;
 
-#[derive(Template)]
-#[template(path = "index.html")]
-pub struct Index;
 
 #[derive(Template)]
 #[template(path = "todo_items.html")]
@@ -14,4 +11,10 @@ impl TodoItems {
     pub fn new(todo_items: Vec<super::TodoItem>) -> Self {
         TodoItems { todo_items }
     }
+}
+
+#[derive(Template)]
+#[template(path = "error.html")]
+pub struct ErrorMessage {
+    pub message: &'static str,
 }
