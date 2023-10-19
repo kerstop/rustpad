@@ -13,7 +13,7 @@ use super::JWT_SECRET;
 
 #[derive(Deserialize)]
 pub struct User {
-    pub id: i64,
+    pub id: i32,
     pub username: String,
 }
 
@@ -49,7 +49,10 @@ impl<S> FromRequestParts<S> for User {
                 &Validation::new(Algorithm::HS512),
             ) {
                 Ok(data) => data.claims.username,
-                Err(e) => return Err(StatusCode::UNAUTHORIZED),
+                Err(_e) => {
+                    println!("{}", _e);
+                    return Err(StatusCode::UNAUTHORIZED);
+                }
             };
 
             let user = match sqlx::query_as!(

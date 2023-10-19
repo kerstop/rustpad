@@ -26,3 +26,20 @@ body {
 .todo-list_item_done-button {
   
 }
+
+label {
+  color: #6e9bb1;
+  margin-left: 1em;
+}
+
+label ~ form {
+  margin: 1em;
+}
+
+.error {
+  border-radius: 1em;
+  padding: 1em;
+  border: 2px rgb(187, 14, 14) solid;
+  background-color: rgb(102, 23, 23);
+  color: white;
+}

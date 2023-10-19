@@ -9,9 +9,19 @@
     ></script>
     <link rel="stylesheet" href="/static/index.css" />
   </head>
-  <form hx-post="/login">
-    <input type="text" name="username" />
-    <input type="text" name="password" />
-    <input type="submit" />
-  </form>
+  <body>
+    <label>Login</label>
+    <form hx-post="/api/login" hx-swap="none">
+      <input type="text" name="username" />
+      <input type="text" name="password" />
+      <input type="submit" />
+    </form>
+    <label>Create User</label>
+    <form hx-post="/api/createUser">
+      <input type="text" name="username" />
+      <input type="text" name="password" />
+      <input type="submit" />
+    </form>
+    <div id="error-anchor"></div>
+  </body>
 </html>

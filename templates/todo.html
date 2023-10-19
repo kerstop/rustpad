@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="/static/index.css" />
   </head>
   <body>
+    <div>
+      <p>logged in as: {{ username }}</p>
+    </div>
     <div id="todo-list_container" hx-trigger="load" hx-get="/api/todo">
 
     </div>

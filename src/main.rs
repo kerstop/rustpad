@@ -4,21 +4,26 @@ mod templates;
 use core::panic;
 
 use anyhow::anyhow;
+use authentication::User;
 use axum::{
-    http::{header, HeaderMap},
     http::StatusCode,
-    response::{ Html, IntoResponse},
+    http::{header, HeaderMap},
+    response::{Html, IntoResponse},
     routing::{get, post},
     Form, Router,
 };
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
 use scrypt::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Scrypt,
 };
 use serde::{Deserialize, Serialize};
-use tower_http::{trace::TraceLayer, services::{ServeFile, ServeDir}};
+use templates::TodoPage;
+use tower_http::{
+    services::{ServeDir, ServeFile},
+    trace::TraceLayer,
+};
 use tracing_subscriber::EnvFilter;
 
 static DB_CONN: Lazy<sqlx::PgPool> = Lazy::new(|| {
@@ -75,15 +80,17 @@ async fn main() {
     let app = Router::new()
         //.nest("/", axum_static::static_router("static"))
         .route_service("/", ServeFile::new("static/index.html"))
+        .route("/todo", get(get_todo_page))
+        .route_service("/login", ServeFile::new("static/login.html"))
         .nest_service("/static", ServeDir::new("static"))
         .route(
-            "/todo",
+            "/api/todo",
             post(todo_post_handler)
                 .get(todo_get_handler)
                 .delete(todo_delete_handler),
         )
-        .route("/login", post(login_post_handler))
-        .route("/createUser", post(create_user_post_handler))
+        .route("/api/login", post(login_post_handler))
+        .route("/api/createUser", post(create_user_post_handler))
         .layer(middleware);
 
     axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
@@ -97,11 +104,11 @@ struct CreateTodoRequest {
     description: String,
 }
 
-async fn todo_post_handler(form: Form<CreateTodoRequest>) -> Result<Html<String>, RustpadError> {
+async fn todo_post_handler(user: User, form: Form<CreateTodoRequest>) -> Result<Html<String>, RustpadError> {
     let todo_item = sqlx::query_as!(
         TodoItem,
-        "INSERT INTO todo_items (item_description) VALUES ($1) RETURNING *;",
-        form.description
+        "INSERT INTO todo_items (item_description, owner_id) VALUES ($1, $2) RETURNING *;",
+        form.description, user.id
     )
     .fetch_one(&*DB_CONN)
     .await?;
@@ -109,10 +116,10 @@ async fn todo_post_handler(form: Form<CreateTodoRequest>) -> Result<Html<String>
     Ok(Html(templates::TodoItems::new(vec![todo_item]).to_string()))
 }
 
-async fn todo_get_handler() -> Result<Html<String>, RustpadError> {
+async fn todo_get_handler(user: User) -> Result<Html<String>, RustpadError> {
     let todo_items = sqlx::query_as!(
         TodoItem,
-        "SELECT id, item_description, is_complete, owner_id FROM todo_items;"
+        "SELECT id, item_description, is_complete, owner_id FROM todo_items WHERE owner_id = $1;", user.id
     )
     .fetch_all(&*DB_CONN)
     .await?;
@@ -125,8 +132,8 @@ struct TodoDeleteRequest {
     pub id: i32,
 }
 
-async fn todo_delete_handler(request: axum::extract::Query<TodoDeleteRequest>) -> StatusCode {
-    match sqlx::query!("DELETE FROM todo_items WHERE id=$1", request.id)
+async fn todo_delete_handler(user: User, request: axum::extract::Query<TodoDeleteRequest>) -> StatusCode {
+    match sqlx::query!("DELETE FROM todo_items WHERE id=$1 AND owner_id = $2", request.id, user.id)
         .execute(&*DB_CONN)
         .await
     {
@@ -142,31 +149,65 @@ struct LoginRequest {
 }
 
 async fn login_post_handler(login_request: Form<LoginRequest>) -> impl IntoResponse {
-    let cookie = format!("login_token={}; Secure; HttpOnly", "not_set");
-
+    use jsonwebtoken::{encode, Algorithm, Header};
     let mut header_map = HeaderMap::new();
 
-    let salt = SaltString::generate(&mut OsRng);
-
-    let hash = Scrypt
-        .hash_password(login_request.password.as_bytes(), &salt)
-        .expect("the hash to work");
-
-    let challenge_hash: String = match sqlx::query!( "SELECT password_hash FROM users WHERE username = $1", login_request.username).fetch_one(&*DB_CONN).await {
+    let password_hash: String = match sqlx::query!(
+        "SELECT password_hash FROM users WHERE username = $1",
+        login_request.username
+    )
+    .fetch_one(&*DB_CONN)
+    .await
+    {
         Ok(h) => h.password_hash,
         Err(_e) => {
-            return (header_map, Html(templates::ErrorMessage{message: "Incorrect username or password"}.to_string()));
+            return (
+                header_map,
+                Html(
+                    templates::ErrorMessage {
+                        message: "Incorrect username or password",
+                    }
+                    .to_string(),
+                ),
+            );
         }
     };
 
-    if hash.to_string() == challenge_hash {
-        let cookie_value = format!("login_token={}; Secure; HttpOnly", "not_set").parse().unwrap();
-        header_map.append(header::SET_COOKIE, cookie_value);
-        return (header_map, Html("".into()))
+    let parsed_hash = PasswordHash::new(&password_hash).expect(&format!(
+        "There is a malformated password for user {0}",
+        login_request.username
+    ));
+
+    match Scrypt.verify_password(login_request.password.as_bytes(), &parsed_hash) {
+        Ok(()) => {
+            let token = encode(
+                &Header::new(Algorithm::HS512),
+                &JwtClaims {
+                    username: login_request.username.clone(),
+                    exp: (chrono::offset::Utc::now() + std::time::Duration::from_secs(86400)).timestamp()
+                },
+                &JWT_SECRET.0,
+            )
+            .expect("JWT token creation to succeed");
+            let cookie_value = format!("login_token={}; Secure; HttpOnly; Path=/", token)
+                .parse()
+                .unwrap();
+            header_map.append(header::SET_COOKIE, cookie_value);
+            header_map.append("HX-Redirect", "/todo".parse().unwrap());
+            return (header_map, Html("".into()));
+        }
+        Err(_) => {
+            return (
+                header_map,
+                Html(
+                    templates::ErrorMessage {
+                        message: "Incorrect username or password",
+                    }
+                    .to_string(),
+                ),
+            )
+        }
     }
-
-    return (header_map, Html(templates::ErrorMessage{message: "Incorrect username or password"}.to_string()));
-
 }
 
 #[derive(Deserialize)]
@@ -178,6 +219,7 @@ struct CreateUserRequest {
 #[derive(Serialize, Deserialize)]
 struct JwtClaims {
     username: String,
+    exp: i64,
 }
 
 async fn create_user_post_handler(
@@ -192,7 +234,7 @@ async fn create_user_post_handler(
         .expect("The hash to work")
         .to_string();
 
-    let q = sqlx::query!(
+    sqlx::query!(
         "INSERT INTO users (username, password_hash) VALUES ($1, $2);",
         create_user_request.username,
         hash
@@ -205,11 +247,20 @@ async fn create_user_post_handler(
         &Header::new(Algorithm::HS512),
         &JwtClaims {
             username: create_user_request.username.clone(),
+            exp: (chrono::offset::Utc::now() + std::time::Duration::from_secs(86400)).timestamp()
         },
         &JWT_SECRET.0,
-    ).expect("JWT token creation to succeed");
+    )
+    .expect("JWT token creation to succeed");
 
-    let cookie = format!("login_token={}; Secure; HttpOnly", token);
+    let mut header_map = HeaderMap::new();
+
+    let cookie = format!("login_token={}; Secure; HttpOnly; Path=/", token);
+
+    header_map.append(header::SET_COOKIE, cookie.parse().unwrap());
+    header_map.append("HX-Redirect", "/todo".parse().unwrap());
+
+    header_map
 }
 
 impl IntoResponse for RustpadError {
@@ -220,4 +271,11 @@ impl IntoResponse for RustpadError {
         )
             .into_response()
     }
+}
+
+async fn get_todo_page(user: User) -> impl IntoResponse {
+    TodoPage {
+        username: user.username,
+    }
+    .into_response()
 }

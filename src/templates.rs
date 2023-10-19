@@ -18,3 +18,9 @@ impl TodoItems {
 pub struct ErrorMessage {
     pub message: &'static str,
 }
+
+#[derive(Template)]
+#[template(path = "todo.html")]
+pub struct TodoPage {
+    pub username: String
+}
