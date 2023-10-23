@@ -22,7 +22,7 @@ impl<S> FromRequestParts<S> for User {
 
     fn from_request_parts<'life0, 'life1, 'async_trait>(
         parts: &'life0 mut Parts,
-        state: &'life1 S,
+        _state: &'life1 S,
     ) -> ::core::pin::Pin<
         Box<
             dyn ::core::future::Future<Output = Result<Self, Self::Rejection>>
@@ -50,7 +50,6 @@ impl<S> FromRequestParts<S> for User {
             ) {
                 Ok(data) => data.claims.username,
                 Err(_e) => {
-                    println!("{}", _e);
                     return Err(StatusCode::UNAUTHORIZED);
                 }
             };

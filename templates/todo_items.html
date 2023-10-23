@@ -4,13 +4,18 @@
   <div>
     <input
       type="checkbox"
-      checked="{{ todo_item.is_complete }}"
+      {% if todo_item.is_complete %}
+      checked
+      {% endif %}
       value="done"
       class="todo-list_item_done-button"
+      hx-patch="/api/todo/{{ todo_item.id }}?is_complete={{ !todo_item.is_complete }}"
+      hx-target="closest .todo-list_item"
+      hx-swap="outerHTML"
     />
     <img
       src="/static/trash-can.png"
-      hx-delete="/api/todo?id={{ todo_item.id }}"
+      hx-delete="/api/todo/{{ todo_item.id }}"
       hx-target="closest .todo-list_item"
       hx-swap="delete"
     />

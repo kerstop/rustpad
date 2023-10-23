@@ -1,26 +1,12 @@
 use askama::Template;
 
+use crate::api::todo::TodoItems;
 
-#[derive(Template)]
-#[template(path = "todo_items.html")]
-pub struct TodoItems {
-    todo_items: Vec<super::TodoItem>,
-}
 
-impl TodoItems {
-    pub fn new(todo_items: Vec<super::TodoItem>) -> Self {
-        TodoItems { todo_items }
-    }
-}
 
-#[derive(Template)]
-#[template(path = "error.html")]
-pub struct ErrorMessage {
-    pub message: &'static str,
-}
 
 #[derive(Template)]
 #[template(path = "todo.html")]
 pub struct TodoPage {
-    pub username: String
+    pub username: String,
 }
