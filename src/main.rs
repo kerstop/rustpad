@@ -9,22 +9,19 @@ use anyhow::anyhow;
 use authentication::User;
 use axum::{
     http::{header, HeaderMap, StatusCode},
-    response::{Html, IntoResponse},
+    response::{IntoResponse, Redirect},
     routing::{delete, get, post},
     Form, Router,
 };
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
 use scrypt::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Scrypt,
 };
 use serde::{Deserialize, Serialize};
 use templates::TodoPage;
-use tower_http::{
-    services::{ServeDir, ServeFile},
-    trace::TraceLayer,
-};
+use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::EnvFilter;
 
 static DB_CONN: Lazy<sqlx::PgPool> = Lazy::new(|| {
@@ -72,9 +69,12 @@ async fn main() {
 
     let app = Router::new()
         //.nest("/", axum_static::static_router("static"))
-        .route_service("/", ServeFile::new("static/index.html"))
+        .route("/", get(index_get_handler))
         .route("/todo", get(get_todo_page))
-        .route_service("/login", ServeFile::new("static/login.html"))
+        .route(
+            "/login",
+            get(|| async { templates::LoginPage {}.into_response() }),
+        )
         .nest_service("/static", ServeDir::new("static"))
         .route(
             "/api/todo",
@@ -104,6 +104,10 @@ struct CreateUserRequest {
 struct JwtClaims {
     username: String,
     exp: i64,
+}
+
+async fn index_get_handler(_user: authentication::User) -> impl IntoResponse {
+    Redirect::to("/todo")
 }
 
 async fn create_user_post_handler(

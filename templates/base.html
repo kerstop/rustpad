@@ -10,12 +10,6 @@
     <link rel="stylesheet" href="/static/index.css" />
   </head>
   <body>
-    <div id="todo-list_container" hx-trigger="load" hx-get="/api/todo">
-
-    </div>
-    <form class="todo-list_create-item_container" hx-post="/api/todo" hx-target="#todo-list_container" hx-swap="beforeend">
-      <input type="text" name="description">
-      <input type="submit">
-    </form>
+  {% block content %} <p> placeholder content </p> {% endblock %}
   </body>
 </html>

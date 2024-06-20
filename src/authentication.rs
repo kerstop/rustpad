@@ -1,6 +1,7 @@
 use axum::{
     extract::FromRequestParts,
     http::{request::Parts, StatusCode},
+    response::Redirect,
     RequestPartsExt,
 };
 
@@ -18,7 +19,7 @@ pub struct User {
 }
 
 impl<S> FromRequestParts<S> for User {
-    type Rejection = StatusCode;
+    type Rejection = Redirect;
 
     fn from_request_parts<'life0, 'life1, 'async_trait>(
         parts: &'life0 mut Parts,
@@ -40,7 +41,7 @@ impl<S> FromRequestParts<S> for User {
 
             let token = match cookies.get("login_token") {
                 Some(t) => t,
-                None => return Err(StatusCode::UNAUTHORIZED),
+                None => return Err(Redirect::to("/login")),
             };
 
             let username = match decode::<super::JwtClaims>(
@@ -50,7 +51,7 @@ impl<S> FromRequestParts<S> for User {
             ) {
                 Ok(data) => data.claims.username,
                 Err(_e) => {
-                    return Err(StatusCode::UNAUTHORIZED);
+                    return Err(Redirect::to("/login"));
                 }
             };
 
@@ -63,7 +64,7 @@ impl<S> FromRequestParts<S> for User {
             .await
             {
                 Ok(u) => u,
-                Err(_) => return Err(StatusCode::UNAUTHORIZED),
+                Err(_) => return Err(Redirect::to("/login")),
             };
 
             return Ok(user);

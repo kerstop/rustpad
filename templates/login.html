@@ -1,15 +1,7 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>rustpad</title>
-    <script
-      src="https://unpkg.com/htmx.org@1.9.5"
-      integrity="sha384-xcuj3WpfgjlKF+FXhSQFQ0ZNr39ln+hwjN3npfM9VBnUskLolQAcN80McRIVOPuO"
-      crossorigin="anonymous"
-    ></script>
-    <link rel="stylesheet" href="/static/index.css" />
-  </head>
-  <body>
+{% extends "base.html" %}
+
+{% block content %}
+
     <label>Login</label>
     <form hx-post="/api/login" hx-swap="none">
       <input type="text" name="username" />
@@ -23,5 +15,5 @@
       <input type="submit" />
     </form>
     <div id="error-anchor"></div>
-  </body>
-</html>
+
+{% endblock %}

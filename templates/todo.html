@@ -1,24 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>rustpad</title>
-    <script
-      src="https://unpkg.com/htmx.org@1.9.5"
-      integrity="sha384-xcuj3WpfgjlKF+FXhSQFQ0ZNr39ln+hwjN3npfM9VBnUskLolQAcN80McRIVOPuO"
-      crossorigin="anonymous"
-    ></script>
-    <link rel="stylesheet" href="/static/index.css" />
-  </head>
-  <body>
-    <div>
-      <p>logged in as: {{ username }}</p>
-    </div>
-    <div id="todo-list_container" hx-trigger="load" hx-get="/api/todo">
+{% extends "base.html" %}
 
-    </div>
-    <form class="todo-list_create-item_container" hx-post="/api/todo" hx-target="#todo-list_container" hx-swap="beforeend">
-      <input type="text" name="description">
-      <input type="submit">
-    </form>
-  </body>
-</html>
+{% block content %}
+<div>
+  <p>logged in as: {{ username }}</p>
+</div>
+<div id="todo-list_container" hx-trigger="load" hx-get="/api/todo"></div>
+<form class="todo-list_create-item_container" hx-post="/api/todo" hx-target="#todo-list_container" hx-swap="beforeend">
+  <input type="text" name="description">
+  <input type="submit">
+</form>
+{% endblock %}
