@@ -1,45 +1,81 @@
+:root {
+  --dark-blue: #082135;
+  --white: #f9ebe0;
+  --light-blue: #5398be;
+  --red: #a71d31;
+}
+
 body {
-  background-color: #0f1a20;
+  background-color: var(--dark-blue);
+  font-family: Arial;
+}
+
+body > .header {
+  background-color: var(--light-blue);
+  border-radius: 12px;
+  font-size: 1.5rem;
+  text-align: right;
+  padding: 1px;
+}
+
+.header p {
+  margin: 0.5em;
 }
 
 .todo-list_item {
   width: 50%;
-  border: 2px #6e9bb1 solid;
+  border: 0px var(--light-blue) solid;
   border-radius: 8px;
-  background-color: #6e9bb1;
+  background-color: var(--white);
   margin: auto;
   margin-top: 6px;
-  display: flex;
-  justify-content: space-between;
+  font-size: 18px;
 }
 
-.todo-list_item div img {
-  height: 2em;
-  vertical-align: middle;
+.todo-list_item > p {
+  float: left;
+  margin: 12px;
 }
 
-.todo-list_item div {
+.todo-list_item > .controls {
+  float: right;
   display: flex;
   align-items: center;
+  margin: 8px;
+}
+
+.todo-list_item > .controls > img {
+  height: 2rem;
+  vertical-align: middle;
+  filter: brightness(0%);
+}
+
+.todo-list_item > .controls > img:hover {
+  filter: none;
+}
+
+.todo-list_item > .info {
+  clear: both;
+  font-size: 0.75rem;
 }
 
 .todo-list_item_done-button {
-  
 }
 
 label {
-  color: #6e9bb1;
+  color: white;
   margin-left: 1em;
 }
 
 label ~ form {
-  margin: 1em;
+  margin: 1rem;
 }
-
 .error {
-  border-radius: 1em;
-  padding: 1em;
-  border: 2px rgb(187, 14, 14) solid;
-  background-color: rgb(102, 23, 23);
+  border-radius: 1rem;
+  padding: 1rem;
+  border-width: 3px;
+  border-style: solid;
+  border-color: lab(from var(--red) calc(l * 0.25) a b);
+  background-color: var(--red);
   color: white;
 }

@@ -2,18 +2,18 @@
 
 {% block content %}
 
-    <label>Login</label>
-    <form hx-post="/api/login" hx-swap="none">
-      <input type="text" name="username" />
-      <input type="text" name="password" />
-      <input type="submit" />
-    </form>
-    <label>Create User</label>
-    <form hx-post="/api/createUser">
-      <input type="text" name="username" />
-      <input type="text" name="password" />
-      <input type="submit" />
-    </form>
-    <div id="error-anchor"></div>
+<label>Login</label>
+<form hx-post="/api/login" hx-swap="none">
+  <input type="text" name="username" />
+  <input type="text" name="password" />
+  <input type="submit" />
+</form>
+<label>Create User</label>
+<form hx-post="/api/createUser">
+  <input type="text" name="username" />
+  <input type="text" name="password" />
+  <input type="submit" />
+</form>
+<div id="error-anchor"></div>
 
 {% endblock %}

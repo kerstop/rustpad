@@ -15,6 +15,7 @@ pub struct TodoItem {
     pub item_description: String,
     pub is_complete: bool,
     pub owner_id: i64,
+    pub created_at: time::OffsetDateTime,
 }
 
 #[derive(Template)]
@@ -53,7 +54,7 @@ pub async fn post_handler(
 pub async fn get_handler(user: User) -> Result<TodoItems, RustpadError> {
     let todo_items = sqlx::query_as!(
         TodoItem,
-        "SELECT id, item_description, is_complete, owner_id FROM todo_items WHERE owner_id = $1;",
+        "SELECT id, item_description, is_complete, owner_id, created_at FROM todo_items WHERE owner_id = $1;",
         user.id
     )
     .fetch_all(&*DB_CONN)
@@ -112,8 +113,9 @@ pub async fn patch_handler(
     .fetch_one(&*DB_CONN)
     .await
     {
-        Ok(item) => Ok(TodoItems { todo_items: vec![item] }),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR)
+        Ok(item) => Ok(TodoItems {
+            todo_items: vec![item],
+        }),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
-
 }

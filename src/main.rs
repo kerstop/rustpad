@@ -135,7 +135,7 @@ async fn create_user_post_handler(
         &Header::new(Algorithm::HS512),
         &JwtClaims {
             username: create_user_request.username.clone(),
-            exp: (chrono::offset::Utc::now() + std::time::Duration::from_secs(86400)).timestamp(),
+            exp: (time::OffsetDateTime::now_utc() + time::Duration::days(5)).unix_timestamp(),
         },
         &JWT_SECRET.0,
     )

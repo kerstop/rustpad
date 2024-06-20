@@ -1,12 +1,17 @@
 {% for todo_item in todo_items %}
 <div class="todo-list_item">
   <p>{{ todo_item.item_description }}</p>
-  <div>
+  <div class="controls">
     <input
       type="checkbox"
-      {% if todo_item.is_complete %}
+      {%
+      if
+      todo_item.is_complete
+      %}
       checked
-      {% endif %}
+      {%
+      endif
+      %}
       value="done"
       class="todo-list_item_done-button"
       hx-patch="/api/todo/{{ todo_item.id }}?is_complete={{ !todo_item.is_complete }}"
@@ -14,11 +19,15 @@
       hx-swap="outerHTML"
     />
     <img
-      src="/static/trash-can.png"
+      src="/static/trash-can-red.png"
       hx-delete="/api/todo/{{ todo_item.id }}"
       hx-target="closest .todo-list_item"
       hx-swap="delete"
     />
+  </div>
+  <div class="info">
+    <hr />
+    <p>Created at: {{ todo_item.created_at }}</p>
   </div>
 </div>
 {% endfor %}

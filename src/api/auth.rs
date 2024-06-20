@@ -47,8 +47,8 @@ pub async fn post_handler(login_request: Form<LoginRequest>) -> impl IntoRespons
                 &Header::new(Algorithm::HS512),
                 &crate::JwtClaims {
                     username: login_request.username.clone(),
-                    exp: (chrono::offset::Utc::now() + std::time::Duration::from_secs(86400))
-                        .timestamp(),
+                    exp: (time::OffsetDateTime::now_utc() + time::Duration::days(5))
+                        .unix_timestamp(),
                 },
                 &JWT_SECRET.0,
             )
